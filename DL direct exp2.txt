@@ -1,0 +1,170 @@
+# ==========================================
+# IMDB SENTIMENT ANALYSIS USING DEEP LEARNING
+# ==========================================
+
+# ========= 1. IMPORT LIBRARIES =========
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import re
+
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Input
+
+# ========= 2. LOAD DATASET =========
+# Keep IMDB_Dataset.csv in same folder
+
+df = pd.read_csv(
+    "IMDB_Dataset.csv",
+    encoding_errors='ignore',
+    on_bad_lines='skip',
+    engine='python'
+)
+
+print("Dataset Loaded Successfully ✅")
+
+# Show first 5 rows
+print(df.head())
+
+# ========= 3. REMOVE NULL VALUES =========
+df = df.dropna()
+
+# ========= 4. RENAME COLUMNS =========
+df.columns = ['review', 'sentiment']
+
+# ========= 5. CLEAN TEXT =========
+def clean_text(text):
+    text = str(text)
+    text = text.lower()
+
+    # Remove HTML tags
+    text = re.sub(r'<.*?>', '', text)
+
+    # Remove special characters and numbers
+    text = re.sub(r'[^a-zA-Z ]', '', text)
+
+    return text
+
+df['review'] = df['review'].apply(clean_text)
+
+# ========= 6. CONVERT LABELS =========
+df['sentiment'] = df['sentiment'].map({
+    'positive': 1,
+    'negative': 0
+})
+
+print("\nSentiment Values:")
+print(df['sentiment'].unique())
+
+print("\nSentiment Count:")
+print(df['sentiment'].value_counts())
+
+# ========= 7. TF-IDF VECTORIZATION =========
+vectorizer = TfidfVectorizer(max_features=5000)
+
+X = vectorizer.fit_transform(df['review']).toarray()
+y = df['sentiment']
+
+print("\nFeature Shape:", X.shape)
+
+# ========= 8. TRAIN TEST SPLIT =========
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+print("\nTraining Data:", X_train.shape)
+print("Testing Data:", X_test.shape)
+
+# ========= 9. BUILD DEEP LEARNING MODEL =========
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+
+    Dense(128, activation='relu'),
+
+    Dense(64, activation='relu'),
+
+    Dense(1, activation='sigmoid')
+])
+
+# ========= 10. COMPILE MODEL =========
+model.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['accuracy']
+)
+
+# Show model summary
+model.summary()
+
+# ========= 11. TRAIN MODEL =========
+history = model.fit(
+    X_train,
+    y_train,
+    epochs=10,
+    batch_size=32,
+    validation_data=(X_test, y_test),
+    verbose=1
+)
+
+# ========= 12. EVALUATE MODEL =========
+loss, accuracy = model.evaluate(X_test, y_test)
+
+print("\n==========================")
+print("Final Test Accuracy:", accuracy)
+print("==========================")
+
+# ========= 13. PREDICTIONS =========
+predictions = model.predict(X_test)
+
+print("\nSample Predictions:\n")
+
+for i in range(5):
+
+    actual = y_test.iloc[i]
+
+    predicted = 1 if predictions[i][0] > 0.5 else 0
+
+    actual_label = "Positive" if actual == 1 else "Negative"
+
+    predicted_label = "Positive" if predicted == 1 else "Negative"
+
+    print(f"Review {i+1}")
+    print("Actual:", actual_label)
+    print("Predicted:", predicted_label)
+    print("-----------------------")
+
+# ========= 14. PLOT ACCURACY GRAPH =========
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+
+plt.title("Accuracy Graph")
+
+plt.xlabel("Epochs")
+
+plt.ylabel("Accuracy")
+
+plt.legend()
+
+plt.show()
+
+# ========= 15. PLOT LOSS GRAPH =========
+plt.plot(history.history['loss'], label='Training Loss')
+
+plt.plot(history.history['val_loss'], label='Validation Loss')
+
+plt.title("Loss Graph")
+
+plt.xlabel("Epochs")
+
+plt.ylabel("Loss")
+
+plt.legend()
+
+plt.show()

@@ -1,0 +1,73 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+# Load dataset
+df = pd.read_csv("1_boston_housing.csv")
+
+# Remove quotes
+df.columns = df.columns.str.replace('"', '')
+
+# Features and target
+X = df.drop("MEDV", axis=1)
+y = df["MEDV"]
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Scaling
+scaler = StandardScaler()
+
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Build model
+model = Sequential()
+model.add(Dense(1, input_shape=(X_train.shape[1],), activation='linear'))
+
+# Compile
+model.compile(
+    optimizer='adam',
+    loss='mse',
+    metrics=['mae']
+)
+
+# Train
+history = model.fit(
+    X_train,
+    y_train,
+    epochs=100,
+    batch_size=16,
+    validation_split=0.2,
+    verbose=1
+)
+
+# Evaluate
+loss, mae = model.evaluate(X_test, y_test)
+
+print("Test Loss:", loss)
+print("Test MAE:", mae)
+
+# Prediction
+y_pred = model.predict(X_test)
+
+for i in range(5):
+    print(f"Actual: {y_test.iloc[i]:.2f} | Predicted: {y_pred[i][0]:.2f}")
+
+# Plot graph
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+
+plt.legend()
+plt.title("Loss Graph")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.show()

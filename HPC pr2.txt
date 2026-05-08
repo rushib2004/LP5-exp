@@ -1,0 +1,102 @@
+#include <iostream>
+#include <vector>
+#include <omp.h>
+
+using namespace std;
+
+// ---------------- MERGE FUNCTION ----------------
+void merge(vector<int>& arr, int left, int mid, int right) {
+    int n1 = mid - left + 1;
+    int n2 = right - mid;
+
+    vector<int> L(n1), R(n2);
+
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[left + i];
+
+    for (int j = 0; j < n2; j++)
+        R[j] = arr[mid + 1 + j];
+
+    int i = 0, j = 0, k = left;
+
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j])
+            arr[k++] = L[i++];
+        else
+            arr[k++] = R[j++];
+    }
+
+    while (i < n1)
+        arr[k++] = L[i++];
+
+    while (j < n2)
+        arr[k++] = R[j++];
+}
+
+// ---------------- SEQUENTIAL MERGE SORT ----------------
+void mergeSortSeq(vector<int>& arr, int left, int right) {
+    if (left < right) {
+        int mid = (left + right) / 2;
+
+        mergeSortSeq(arr, left, mid);
+        mergeSortSeq(arr, mid + 1, right);
+
+        merge(arr, left, mid, right);
+    }
+}
+
+// ---------------- PARALLEL MERGE SORT ----------------
+void mergeSortPar(vector<int>& arr, int left, int right, int depth) {
+    if (left < right) {
+        int mid = (left + right) / 2;
+
+        if (depth <= 0) {
+            mergeSortSeq(arr, left, right);
+        } else {
+            #pragma omp parallel sections
+            {
+                #pragma omp section
+                mergeSortPar(arr, left, mid, depth - 1);
+
+                #pragma omp section
+                mergeSortPar(arr, mid + 1, right, depth - 1);
+            }
+        }
+
+        merge(arr, left, mid, right);
+    }
+}
+
+// ---------------- MAIN FUNCTION ----------------
+int main() {
+    int n = 100000;
+    vector<int> arr(n), arr_copy;
+
+    // Generate random data
+    for (int i = 0; i < n; i++)
+        arr[i] = rand() % 100000;
+
+    arr_copy = arr;
+
+    // Sequential Time
+    double start = omp_get_wtime();
+    mergeSortSeq(arr, 0, n - 1);
+    double end = omp_get_wtime();
+
+    double seq_time = end - start;
+
+    // Parallel Time
+    start = omp_get_wtime();
+    mergeSortPar(arr_copy, 0, n - 1, 4); // depth controls threads
+    end = omp_get_wtime();
+
+    double par_time = end - start;
+
+    // Results
+    cout << "Sequential Time: " << seq_time << " seconds\n";
+    cout << "Parallel Time:   " << par_time << " seconds\n";
+
+    cout << "Speedup: " << seq_time / par_time << endl;
+
+    return 0;
+}

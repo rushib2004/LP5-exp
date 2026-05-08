@@ -1,0 +1,43 @@
+#include <iostream>
+#include <vector>
+#include <omp.h>
+#include <limits.h>
+
+using namespace std;
+
+// ---------------- MAIN FUNCTION ----------------
+int main() {
+    int n = 1000000;
+    vector<int> arr(n);
+
+    // Initialize array
+    for (int i = 0; i < n; i++) {
+        arr[i] = rand() % 1000;
+    }
+
+    int min_val = INT_MAX;
+    int max_val = INT_MIN;
+    long long sum = 0;
+
+    // ---------------- PARALLEL REDUCTION ----------------
+    #pragma omp parallel for reduction(min:min_val) reduction(max:max_val) reduction(+:sum)
+    for (int i = 0; i < n; i++) {
+        if (arr[i] < min_val)
+            min_val = arr[i];
+
+        if (arr[i] > max_val)
+            max_val = arr[i];
+
+        sum += arr[i];
+    }
+
+    double avg = (double)sum / n;
+
+    // ---------------- OUTPUT ----------------
+    cout << "Minimum Value: " << min_val << endl;
+    cout << "Maximum Value: " << max_val << endl;
+    cout << "Sum: " << sum << endl;
+    cout << "Average: " << avg << endl;
+
+    return 0;
+}
